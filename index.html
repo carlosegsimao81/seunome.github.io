@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha</title>
+    
+    <!-- Configurações de Anúncios -->
+    <script>
+        // CONFIGURAÇÕES DE ANÚNCIOS - PREENCHA COM SEUS DADOS
+        window.AD_CONFIG = {
+            // Google AdSense
+            GOOGLE_ADSENSE_CLIENT: 'ca-pub-XXXXXXXXXXXXXXXX', // Seu Publisher ID
+            GOOGLE_ADSENSE_SLOT_LEFT: '1234567890', // Slot ID para anúncio esquerdo
+            GOOGLE_ADSENSE_SLOT_RIGHT: '0987654321', // Slot ID para anúncio direito
+            
+            // Outras plataformas
+            AD_UNIT_LEFT: 'left-ad-unit',
+            AD_UNIT_RIGHT: 'right-ad-unit',
+            
+            // Configurações de validação
+            REQUIRE_LOGIN: false, // true para exigir login
+            AUTH_TOKEN: '', // Token de autenticação se necessário
+            API_ENDPOINT: 'https://api.exemplo.com/validate', // Endpoint para validação
+            
+            // Configurações de exibição
+            SHOW_ADS: true, // false para desabilitar anúncios
+            AD_REFRESH_INTERVAL: 30000, // Intervalo de refresh em ms (30s)
+            
+            // Configurações de monetização
+            MIN_IMPRESSIONS: 1000, // Impressões mínimas para pagamento
+            CPC_TARGET: 0.50, // CPC alvo em reais
+            CPM_TARGET: 2.00 // CPM alvo em reais
+        };
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+
+        /* Layout principal com anúncios */
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* Sidebars de anúncios */
+        .ad-sidebar {
+            width: 300px;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .ad-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            border-radius: 15px 15px 0 0;
+            font-size: 0.9rem;
+        }
+
+        .ad-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        .ad-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            color: #6c757d;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .ad-placeholder small {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* Container do jogo */
+        .game-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 2rem;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+        .cell:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell.x {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .cell.o {
+            color: #007bff;
+            background: #d1ecf1;
+            border-color: #007bff;
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .score {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .player {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* Anúncio inferior */
+        .ad-bottom {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .ad-bottom .ad-header {
+            border-radius: 0;
+            font-size: 0.8rem;
+            padding: 10px;
+        }
+
+        .ad-bottom .ad-content {
+            min-height: 90px;
+            padding: 10px;
+        }
+
+        .ad-bottom .ad-placeholder {
+            min-height: 70px;
+            font-size: 1rem;
+        }
+
+        /* Responsividade */
+        @media (max-width: 1200px) {
+            .ad-sidebar {
+                width: 250px;
+            }
+            
+            .main-container {
+                gap: 15px;
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .ad-sidebar {
+                width: 100%;
+                min-height: 120px;
+                flex-direction: row;
+            }
+            
+            .ad-sidebar .ad-content {
+                min-height: 100px;
+            }
+            
+            .ad-sidebar .ad-placeholder {
+                min-height: 80px;
+            }
+            
+            .container {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-container {
+                padding: 10px;
+                gap: 15px;
+            }
+            
+            .container {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+            
+            .game-board {
+                max-width: 250px;
+            }
+            
+            .ad-sidebar {
+                min-height: 100px;
+            }
+            
+            .ad-sidebar .ad-content {
+                min-height: 80px;
+                padding: 15px;
+            }
+        }
+
+        /* Animações */
+        @keyframes winner {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); background: #ffd700; }
+            100% { transform: scale(1); }
+        }
+
+        /* Estilos para anúncios Google AdSense */
+        .adsbygoogle {
+            width: 100%;
+            height: 100%;
+            min-height: 250px;
+        }
+
+        /* Fallback quando anúncios não carregam */
+        .ad-fallback {
+            display: none;
+        }
+
+        .ad-fallback.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Container principal com anúncios -->
+    <div class="main-container">
+        <!-- Anúncio lateral esquerdo -->
+        <div class="ad-sidebar ad-left" id="adLeft">
+            <div class="ad-header">Publicidade</div>
+            <div class="ad-content" id="adContentLeft">
+                <!-- Google AdSense -->
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                     data-ad-slot="1234567890"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                
+                <!-- Fallback para outras plataformas -->
+                <div class="ad-fallback" id="adFallbackLeft">
+                    <div class="ad-placeholder">
+                        <span>Anúncio</span>
+                        <small>300x600</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Container do jogo -->
+        <div class="game-container">
+            <div class="container">
+                <h1>Jogo da Velha</h1>
+                
+                <div class="status" id="status">Vez do jogador X</div>
+                
+                <div class="game-board" id="board">
+                    <div class="cell" data-index="0"></div>
+                    <div class="cell" data-index="1"></div>
+                    <div class="cell" data-index="2"></div>
+                    <div class="cell" data-index="3"></div>
+                    <div class="cell" data-index="4"></div>
+                    <div class="cell" data-index="5"></div>
+                    <div class="cell" data-index="6"></div>
+                    <div class="cell" data-index="7"></div>
+                    <div class="cell" data-index="8"></div>
+                </div>
+                
+                <button class="reset-btn" id="resetBtn">Novo Jogo</button>
+                
+                <div class="score">
+                    <div class="score-item">
+                        <span class="player">X</span>
+                        <span class="count" id="scoreX">0</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="player">O</span>
+                        <span class="count" id="scoreO">0</span>
+                    </div>
+                </div>
+                
+                <!-- Anúncio inferior -->
+                <div class="ad-bottom" id="adBottom">
+                    <div class="ad-header">Publicidade</div>
+                    <div class="ad-content" id="adContentBottom">
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        
+                        <div class="ad-fallback" id="adFallbackBottom">
+                            <div class="ad-placeholder">
+                                <span>Anúncio</span>
+                                <small>728x90</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Anúncio lateral direito -->
+        <div class="ad-sidebar ad-right" id="adRight">
+            <div class="ad-header">Publicidade</div>
+            <div class="ad-content" id="adContentRight">
+                <!-- Google AdSense -->
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                     data-ad-slot="0987654321"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                
+                <!-- Fallback para outras plataformas -->
+                <div class="ad-fallback" id="adFallbackRight">
+                    <div class="ad-placeholder">
+                        <span>Anúncio</span>
+                        <small>300x600</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts de anúncios -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    
+    <!-- Todo o código JavaScript incorporado inline -->
+    <script>
+        // ===== SISTEMA DE ANÚNCIOS =====
+        class AdManager {
+            constructor() {
+                this.config = window.AD_CONFIG || {};
+                this.adUnits = {};
+                this.impressions = 0;
+                this.clicks = 0;
+                this.revenue = 0;
+                this.isInitialized = false;
+                
+                this.init();
+            }
+            
+            init() {
+                if (!this.config.SHOW_ADS) {
+                    this.hideAllAds();
+                    return;
+                }
+                
+                // Verificar se precisa de validação
+                if (this.config.REQUIRE_LOGIN && !this.validateAuth()) {
+                    console.log('Autenticação necessária para exibir anúncios');
+                    this.showLoginPrompt();
+                    return;
+                }
+                
+                this.initializeAdUnits();
+                this.loadAds();
+                this.startAdRefresh();
+                this.trackMetrics();
+                
+                this.isInitialized = true;
+            }
+            
+            validateAuth() {
+                if (!this.config.AUTH_TOKEN) return false;
+                
+                // Validação básica do token
+                try {
+                    // Aqui você pode implementar validação JWT ou similar
+                    const token = this.config.AUTH_TOKEN;
+                    if (token && token.length > 10) {
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Erro na validação do token:', error);
+                }
+                
+                return false;
+            }
+            
+            showLoginPrompt() {
+                const loginPrompt = document.createElement('div');
+                loginPrompt.className = 'login-prompt';
+                loginPrompt.innerHTML = `
+                    <div class="login-content">
+                        <h3>Login Necessário</h3>
+                        <p>Faça login para acessar o conteúdo completo</p>
+                        <button onclick="adManager.retryAuth()">Tentar Novamente</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(loginPrompt);
+                
+                // Adicionar CSS para o prompt
+                const style = document.createElement('style');
+                style.textContent = `
+                    .login-prompt {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 1000;
+                    }
+                    .login-content {
+                        background: white;
+                        padding: 2rem;
+                        border-radius: 15px;
+                        text-align: center;
+                    }
+                    .login-content button {
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 25px;
+                        cursor: pointer;
+                        margin-top: 1rem;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            retryAuth() {
+                const prompt = document.querySelector('.login-prompt');
+                if (prompt) prompt.remove();
+                
+                if (this.validateAuth()) {
+                    this.init();
+                } else {
+                    this.showLoginPrompt();
+                }
+            }
+            
+            initializeAdUnits() {
+                // Configurar unidades de anúncio
+                this.adUnits = {
+                    left: {
+                        element: document.getElementById('adContentLeft'),
+                        fallback: document.getElementById('adFallbackLeft'),
+                        type: 'sidebar',
+                        size: '300x600'
+                    },
+                    right: {
+                        element: document.getElementById('adContentRight'),
+                        fallback: document.getElementById('adFallbackRight'),
+                        type: 'sidebar',
+                        size: '300x600'
+                    },
+                    bottom: {
+                        element: document.getElementById('adContentBottom'),
+                        fallback: document.getElementById('adFallbackBottom'),
+                        type: 'banner',
+                        size: '728x90'
+                    }
+                };
+            }
+            
+            loadAds() {
+                // Carregar Google AdSense
+                if (this.config.GOOGLE_ADSENSE_CLIENT && this.config.GOOGLE_ADSENSE_CLIENT !== 'ca-pub-XXXXXXXXXXXXXXXX') {
+                    this.loadGoogleAds();
+                } else {
+                    this.showFallbackAds();
+                }
+                
+                // Carregar anúncios de outras plataformas se necessário
+                this.loadAlternativeAds();
+            }
+            
+            loadGoogleAds() {
+                try {
+                    // Carregar anúncios Google AdSense
+                    (adsbygoogle = window.adsbygoogle || []).push({});
+                    
+                    // Configurar slots específicos
+                    if (this.config.GOOGLE_ADSENSE_SLOT_LEFT) {
+                        this.configureAdSlot('left', this.config.GOOGLE_ADSENSE_SLOT_LEFT);
+                    }
+                    if (this.config.GOOGLE_ADSENSE_SLOT_RIGHT) {
+                        this.configureAdSlot('right', this.config.GOOGLE_ADSENSE_SLOT_RIGHT);
+                    }
+                    
+                    console.log('Google AdSense carregado com sucesso');
+                } catch (error) {
+                    console.error('Erro ao carregar Google AdSense:', error);
+                    this.showFallbackAds();
+                }
+            }
+            
+            configureAdSlot(position, slotId) {
+                const adUnit = this.adUnits[position];
+                if (!adUnit) return;
+                
+                // Configurar slot específico
+                const adElement = adUnit.element.querySelector('.adsbygoogle');
+                if (adElement) {
+                    adElement.setAttribute('data-ad-slot', slotId);
+                }
+            }
+            
+            loadAlternativeAds() {
+                // Implementar carregamento de outras plataformas de anúncios
+                // Exemplo: Facebook Audience Network, Amazon, etc.
+                
+                // Simular carregamento de anúncios alternativos
+                setTimeout(() => {
+                    this.checkAdLoadStatus();
+                }, 3000);
+            }
+            
+            checkAdLoadStatus() {
+                Object.keys(this.adUnits).forEach(position => {
+                    const adUnit = this.adUnits[position];
+                    const adElement = adUnit.element.querySelector('.adsbygoogle');
+                    
+                    if (adElement && !adElement.innerHTML.trim()) {
+                        // AdSense não carregou, mostrar fallback
+                        this.showFallbackAd(position);
+                    }
+                });
+            }
+            
+            showFallbackAds() {
+                Object.keys(this.adUnits).forEach(position => {
+                    this.showFallbackAd(position);
+                });
+            }
+            
+            showFallbackAd(position) {
+                const adUnit = this.adUnits[position];
+                if (!adUnit) return;
+                
+                // Ocultar AdSense
+                const adSenseElement = adUnit.element.querySelector('.adsbygoogle');
+                if (adSenseElement) {
+                    adSenseElement.style.display = 'none';
+                }
+                
+                // Mostrar fallback
+                if (adUnit.fallback) {
+                    adUnit.fallback.classList.add('show');
+                }
+            }
+            
+            startAdRefresh() {
+                if (this.config.AD_REFRESH_INTERVAL > 0) {
+                    setInterval(() => {
+                        this.refreshAds();
+                    }, this.config.AD_REFRESH_INTERVAL);
+                }
+            }
+            
+            refreshAds() {
+                // Recarregar anúncios para maximizar receita
+                console.log('Atualizando anúncios...');
+                
+                // Implementar lógica de refresh específica para cada plataforma
+                this.loadAlternativeAds();
+            }
+            
+            trackMetrics() {
+                // Rastrear impressões
+                this.trackImpressions();
+                
+                // Rastrear cliques
+                this.trackClicks();
+                
+                // Rastrear receita
+                this.trackRevenue();
+            }
+            
+            trackImpressions() {
+                // Simular impressões
+                setInterval(() => {
+                    this.impressions += Math.floor(Math.random() * 10) + 1;
+                    this.updateMetrics();
+                }, 5000);
+            }
+            
+            trackClicks() {
+                // Rastrear cliques nos anúncios
+                Object.keys(this.adUnits).forEach(position => {
+                    const adUnit = this.adUnits[position];
+                    if (adUnit.element) {
+                        adUnit.element.addEventListener('click', (e) => {
+                            if (e.target.closest('.adsbygoogle') || e.target.closest('.ad-fallback')) {
+                                this.clicks++;
+                                this.updateMetrics();
+                            }
+                        });
+                    }
+                });
+            }
+            
+            trackRevenue() {
+                // Calcular receita estimada baseada em CPC/CPM
+                setInterval(() => {
+                    const cpcRevenue = this.clicks * this.config.CPC_TARGET;
+                    const cpmRevenue = (this.impressions / 1000) * this.config.CPM_TARGET;
+                    this.revenue = cpcRevenue + cpmRevenue;
+                    this.updateMetrics();
+                }, 10000);
+            }
+            
+            updateMetrics() {
+                // Atualizar métricas na interface (opcional)
+                console.log(`Métricas: ${this.impressions} impressões, ${this.clicks} cliques, R$ ${this.revenue.toFixed(2)} receita`);
+                
+                // Verificar se atingiu impressões mínimas para pagamento
+                if (this.impressions >= this.config.MIN_IMPRESSIONS) {
+                    console.log('✅ Impressões mínimas atingidas para pagamento!');
+                }
+            }
+            
+            hideAllAds() {
+                const adElements = document.querySelectorAll('.ad-sidebar, .ad-bottom');
+                adElements.forEach(ad => {
+                    ad.style.display = 'none';
+                });
+            }
+            
+            // Métodos para integração com APIs externas
+            async validateWithAPI() {
+                if (!this.config.API_ENDPOINT) return false;
+                
+                try {
+                    const response = await fetch(this.config.API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.config.AUTH_TOKEN}`
+                        },
+                        body: JSON.stringify({
+                            timestamp: Date.now(),
+                            userAgent: navigator.userAgent
+                        })
+                    });
+                    
+                    return response.ok;
+                } catch (error) {
+                    console.error('Erro na validação com API:', error);
+                    return false;
+                }
+            }
+            
+            // Método para exportar métricas
+            exportMetrics() {
+                return {
+                    impressions: this.impressions,
+                    clicks: this.clicks,
+                    revenue: this.revenue,
+                    ctr: this.impressions > 0 ? (this.clicks / this.impressions * 100).toFixed(2) : 0,
+                    timestamp: new Date().toISOString()
+                };
+            }
+        }
+
+        // ===== JOGO DA VELHA =====
+        class JogoDaVelha {
+            constructor() {
+                this.board = Array(9).fill('');
+                this.currentPlayer = 'X';
+                this.gameActive = true;
+                this.scores = { X: 0, O: 0 };
+                
+                this.initializeGame();
+            }
+            
+            initializeGame() {
+                this.board = Array(9).fill('');
+                this.currentPlayer = 'X';
+                this.gameActive = true;
+                
+                this.updateStatus();
+                this.renderBoard();
+                this.addEventListeners();
+            }
+            
+            addEventListeners() {
+                const cells = document.querySelectorAll('.cell');
+                const resetBtn = document.getElementById('resetBtn');
+                
+                cells.forEach(cell => {
+                    cell.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.dataset.index);
+                        this.makeMove(index);
+                    });
+                });
+                
+                resetBtn.addEventListener('click', () => {
+                    this.resetGame();
+                });
+            }
+            
+            makeMove(index) {
+                if (this.board[index] !== '' || !this.gameActive) return;
+                
+                this.board[index] = this.currentPlayer;
+                this.renderBoard();
+                
+                if (this.checkWin()) {
+                    this.handleWin();
+                } else if (this.checkDraw()) {
+                    this.handleDraw();
+                } else {
+                    this.switchPlayer();
+                }
+            }
+            
+            checkWin() {
+                const winConditions = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Linhas
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colunas
+                    [0, 4, 8], [2, 4, 6] // Diagonais
+                ];
+                
+                return winConditions.some(condition => {
+                    const [a, b, c] = condition;
+                    return this.board[a] && 
+                           this.board[a] === this.board[b] && 
+                           this.board[a] === this.board[c];
+                });
+            }
+            
+            checkDraw() {
+                return this.board.every(cell => cell !== '');
+            }
+            
+            handleWin() {
+                this.gameActive = false;
+                this.scores[this.currentPlayer]++;
+                this.updateScores();
+                this.updateStatus(`Jogador ${this.currentPlayer} venceu!`);
+                
+                setTimeout(() => {
+                    this.highlightWinningCells();
+                }, 100);
+            }
+            
+            handleDraw() {
+                this.gameActive = false;
+                this.updateStatus('Empate!');
+            }
+            
+            switchPlayer() {
+                this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+                this.updateStatus();
+            }
+            
+            highlightWinningCells() {
+                const winConditions = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                    [0, 4, 8], [2, 4, 6]
+                ];
+                
+                for (let condition of winConditions) {
+                    const [a, b, c] = condition;
+                    if (this.board[a] && 
+                        this.board[a] === this.board[b] && 
+                        this.board[a] === this.board[c]) {
+                        
+                        condition.forEach(index => {
+                            const cell = document.querySelector(`[data-index="${index}"]`);
+                            cell.style.animation = 'winner 0.6s ease-in-out';
+                        });
+                        break;
+                    }
+                }
+            }
+            
+            renderBoard() {
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach((cell, index) => {
+                    cell.textContent = this.board[index];
+                    cell.className = 'cell';
+                    if (this.board[index] === 'X') {
+                        cell.classList.add('x');
+                    } else if (this.board[index] === 'O') {
+                        cell.classList.add('o');
+                    }
+                });
+            }
+            
+            updateStatus(message) {
+                const status = document.getElementById('status');
+                if (message) {
+                    status.textContent = message;
+                } else {
+                    status.textContent = `Vez do jogador ${this.currentPlayer}`;
+                }
+            }
+            
+            updateScores() {
+                document.getElementById('scoreX').textContent = this.scores.X;
+                document.getElementById('scoreO').textContent = this.scores.O;
+            }
+            
+            resetGame() {
+                this.initializeGame();
+                
+                // Remove animações
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.style.animation = '';
+                });
+            }
+        }
+
+        // ===== INICIALIZAÇÃO =====
+        let adManager;
+        let jogo;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar gerenciador de anúncios
+            adManager = new AdManager();
+            
+            // Inicializar jogo
+            jogo = new JogoDaVelha();
+            
+            // Expor para uso global
+            window.adManager = adManager;
+            window.jogo = jogo;
+        });
+
+        // Função para debug das métricas
+        window.showAdMetrics = () => {
+            if (adManager) {
+                const metrics = adManager.exportMetrics();
+                console.table(metrics);
+                alert(`Métricas:\nImpressões: ${metrics.impressions}\nCliques: ${metrics.clicks}\nReceita: R$ ${metrics.revenue}\nCTR: ${metrics.ctr}%`);
+            }
+        };
+    </script>
+</body>
+</html>
